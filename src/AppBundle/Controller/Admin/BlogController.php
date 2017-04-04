@@ -11,14 +11,12 @@
 
 namespace AppBundle\Controller\Admin;
 
-use AppBundle\Entity\Post;
-use AppBundle\Form\PostType;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Method;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Security;
-use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-use Symfony\Component\Form\Extension\Core\Type\SubmitType;
-use Symfony\Component\HttpFoundation\Request;
+use AppBundle\Entity\Post;
 
 /**
  * Controller used to manage blog contents in the backend.
@@ -26,7 +24,6 @@ use Symfony\Component\HttpFoundation\Request;
  * Please note that the application backend is developed manually for learning
  * purposes. However, in your real Symfony application you should use any of the
  * existing bundles that let you generate ready-to-use backends without effort.
- *
  * See http://knpbundles.com/keyword/admin
  *
  * @Route("/admin/post")
@@ -55,9 +52,9 @@ class BlogController extends Controller
     public function indexAction()
     {
         $entityManager = $this->getDoctrine()->getManager();
-        $posts = $entityManager->getRepository(Post::class)->findBy(['author' => $this->getUser()], ['publishedAt' => 'DESC']);
+        $posts = $entityManager->getRepository('AppBundle:Post')->findAll();
 
-        return $this->render('admin/blog/index.html.twig', ['posts' => $posts]);
+        return $this->render('admin/blog/index.html.twig', array('posts' => $posts));
     }
 
     /**
@@ -73,11 +70,11 @@ class BlogController extends Controller
     public function newAction(Request $request)
     {
         $post = new Post();
-        $post->setAuthor($this->getUser());
+        $post->setAuthorEmail($this->getUser()->getEmail());
 
         // See http://symfony.com/doc/current/book/forms.html#submitting-forms-with-multiple-buttons
-        $form = $this->createForm(PostType::class, $post)
-            ->add('saveAndCreateNew', SubmitType::class);
+        $form = $this->createForm('AppBundle\Form\PostType', $post)
+            ->add('saveAndCreateNew', 'Symfony\Component\Form\Extension\Core\Type\SubmitType');
 
         $form->handleRequest($request);
 
@@ -105,10 +102,10 @@ class BlogController extends Controller
             return $this->redirectToRoute('admin_post_index');
         }
 
-        return $this->render('admin/blog/new.html.twig', [
+        return $this->render('admin/blog/new.html.twig', array(
             'post' => $post,
             'form' => $form->createView(),
-        ]);
+        ));
     }
 
     /**
@@ -119,13 +116,19 @@ class BlogController extends Controller
      */
     public function showAction(Post $post)
     {
-        // This security check can also be performed
-        // using an annotation: @Security("is_granted('show', post)")
-        $this->denyAccessUnlessGranted('show', $post, 'Posts can only be shown to their authors.');
+        // This security check can also be performed:
+        //   1. Using an annotation: @Security("post.isAuthor(user)")
+        //   2. Using a "voter" (see http://symfony.com/doc/current/cookbook/security/voters_data_permission.html)
+        if (null === $this->getUser() || !$post->isAuthor($this->getUser())) {
+            throw $this->createAccessDeniedException('Posts can only be shown to their authors.');
+        }
 
-        return $this->render('admin/blog/show.html.twig', [
-            'post' => $post,
-        ]);
+        $deleteForm = $this->createDeleteForm($post);
+
+        return $this->render('admin/blog/show.html.twig', array(
+            'post'        => $post,
+            'delete_form' => $deleteForm->createView(),
+        ));
     }
 
     /**
@@ -136,57 +139,80 @@ class BlogController extends Controller
      */
     public function editAction(Post $post, Request $request)
     {
-        $this->denyAccessUnlessGranted('edit', $post, 'Posts can only be edited by their authors.');
+        if (null === $this->getUser() || !$post->isAuthor($this->getUser())) {
+            throw $this->createAccessDeniedException('Posts can only be edited by their authors.');
+        }
 
         $entityManager = $this->getDoctrine()->getManager();
 
-        $form = $this->createForm(PostType::class, $post);
+        $editForm = $this->createForm('AppBundle\Form\PostType', $post);
+        $deleteForm = $this->createDeleteForm($post);
 
-        $form->handleRequest($request);
+        $editForm->handleRequest($request);
 
-        if ($form->isSubmitted() && $form->isValid()) {
+        if ($editForm->isSubmitted() && $editForm->isValid()) {
             $post->setSlug($this->get('slugger')->slugify($post->getTitle()));
             $entityManager->flush();
 
             $this->addFlash('success', 'post.updated_successfully');
 
-            return $this->redirectToRoute('admin_post_edit', ['id' => $post->getId()]);
+            return $this->redirectToRoute('admin_post_edit', array('id' => $post->getId()));
         }
 
-        return $this->render('admin/blog/edit.html.twig', [
-            'post' => $post,
-            'form' => $form->createView(),
-        ]);
+        return $this->render('admin/blog/edit.html.twig', array(
+            'post'        => $post,
+            'edit_form'   => $editForm->createView(),
+            'delete_form' => $deleteForm->createView(),
+        ));
     }
 
     /**
      * Deletes a Post entity.
      *
-     * @Route("/{id}/delete", name="admin_post_delete")
-     * @Method("POST")
-     * @Security("is_granted('delete', post)")
+     * @Route("/{id}", name="admin_post_delete")
+     * @Method("DELETE")
+     * @Security("post.isAuthor(user)")
      *
      * The Security annotation value is an expression (if it evaluates to false,
      * the authorization mechanism will prevent the user accessing this resource).
+     * The isAuthor() method is defined in the AppBundle\Entity\Post entity.
      */
     public function deleteAction(Request $request, Post $post)
     {
-        if (!$this->isCsrfTokenValid('delete', $request->request->get('token'))) {
-            return $this->redirectToRoute('admin_post_index');
+        $form = $this->createDeleteForm($post);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $entityManager = $this->getDoctrine()->getManager();
+
+            $entityManager->remove($post);
+            $entityManager->flush();
+
+            $this->addFlash('success', 'post.deleted_successfully');
         }
 
-        $entityManager = $this->getDoctrine()->getManager();
-
-        // Delete the tags associated with this blog post. This is done automatically
-        // by Doctrine, except for SQLite (the database used in this application)
-        // because foreign key support is not enabled by default in SQLite
-        $post->getTags()->clear();
-
-        $entityManager->remove($post);
-        $entityManager->flush();
-
-        $this->addFlash('success', 'post.deleted_successfully');
-
         return $this->redirectToRoute('admin_post_index');
+    }
+
+    /**
+     * Creates a form to delete a Post entity by id.
+     *
+     * This is necessary because browsers don't support HTTP methods different
+     * from GET and POST. Since the controller that removes the blog posts expects
+     * a DELETE method, the trick is to create a simple form that *fakes* the
+     * HTTP DELETE method.
+     * See http://symfony.com/doc/current/cookbook/routing/method_parameters.html.
+     *
+     * @param Post $post The post object
+     *
+     * @return \Symfony\Component\Form\Form The form
+     */
+    private function createDeleteForm(Post $post)
+    {
+        return $this->createFormBuilder()
+            ->setAction($this->generateUrl('admin_post_delete', array('id' => $post->getId())))
+            ->setMethod('DELETE')
+            ->getForm()
+        ;
     }
 }

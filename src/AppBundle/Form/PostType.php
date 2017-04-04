@@ -11,11 +11,7 @@
 
 namespace AppBundle\Form;
 
-use AppBundle\Entity\Post;
-use AppBundle\Form\Type\DateTimePickerType;
-use AppBundle\Form\Type\TagsInputType;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
@@ -24,7 +20,6 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
  *
  * @author Ryan Weaver <weaverryan@gmail.com>
  * @author Javier Eguiluz <javier.eguiluz@gmail.com>
- * @author Yonel Ceruto <yonelceruto@gmail.com>
  */
 class PostType extends AbstractType
 {
@@ -40,27 +35,24 @@ class PostType extends AbstractType
         // the client-side form validation. This means that you can't test the
         // server-side validation errors from the browser. To temporarily disable
         // this validation, set the 'required' attribute to 'false':
-        // $builder->add('title', null, ['required' => false, ...]);
+        //
+        //     $builder->add('title', null, array('required' => false, ...));
 
         $builder
-            ->add('title', null, [
-                'attr' => ['autofocus' => true],
+            ->add('title', null, array(
+                'attr' => array('autofocus' => true),
                 'label' => 'label.title',
-            ])
-            ->add('summary', TextareaType::class, [
-                'label' => 'label.summary',
-            ])
-            ->add('content', null, [
-                'attr' => ['rows' => 20],
+            ))
+            ->add('summary', 'Symfony\Component\Form\Extension\Core\Type\TextareaType', array('label' => 'label.summary'))
+            ->add('content', null, array(
+                'attr' => array('rows' => 20),
                 'label' => 'label.content',
-            ])
-            ->add('publishedAt', DateTimePickerType::class, [
+            ))
+            ->add('authorEmail', null, array('label' => 'label.author_email'))
+            ->add('publishedAt', 'AppBundle\Form\Type\DateTimePickerType', array(
                 'label' => 'label.published_at',
-            ])
-            ->add('tags', TagsInputType::class, [
-                'label' => 'label.tags',
-                'required' => false,
-            ])
+            ))
+            ->add('othertext', null,array('label' => 'label.othertext'))
         ;
     }
 
@@ -69,8 +61,8 @@ class PostType extends AbstractType
      */
     public function configureOptions(OptionsResolver $resolver)
     {
-        $resolver->setDefaults([
-            'data_class' => Post::class,
-        ]);
+        $resolver->setDefaults(array(
+            'data_class' => 'AppBundle\Entity\Post',
+        ));
     }
 }

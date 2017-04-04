@@ -30,8 +30,6 @@ use Symfony\Component\Validator\Constraints as Assert;
 class Comment
 {
     /**
-     * @var int
-     *
      * @ORM\Id
      * @ORM\GeneratedValue
      * @ORM\Column(type="integer")
@@ -39,42 +37,34 @@ class Comment
     private $id;
 
     /**
-     * @var Post
-     *
      * @ORM\ManyToOne(targetEntity="Post", inversedBy="comments")
      * @ORM\JoinColumn(nullable=false)
      */
     private $post;
 
     /**
-     * @var string
-     *
      * @ORM\Column(type="text")
      * @Assert\NotBlank(message="comment.blank")
      * @Assert\Length(
-     *     min=5,
-     *     minMessage="comment.too_short",
-     *     max=10000,
-     *     maxMessage="comment.too_long"
+     *     min = "5",
+     *     minMessage = "comment.too_short",
+     *     max = "10000",
+     *     maxMessage = "comment.too_long"
      * )
      */
     private $content;
 
     /**
-     * @var \DateTime
-     *
-     * @ORM\Column(type="datetime")
-     * @Assert\DateTime
+     * @ORM\Column(type="string")
+     * @Assert\Email()
      */
-    private $publishedAt;
+    private $authorEmail;
 
     /**
-     * @var User
-     *
-     * @ORM\ManyToOne(targetEntity="AppBundle\Entity\User")
-     * @ORM\JoinColumn(nullable=false)
+     * @ORM\Column(type="datetime")
+     * @Assert\DateTime()
      */
-    private $author;
+    private $publishedAt;
 
     public function __construct()
     {
@@ -82,7 +72,7 @@ class Comment
     }
 
     /**
-     * @Assert\IsTrue(message="comment.is_spam")
+     * @Assert\IsTrue(message = "comment.is_spam")
      */
     public function isLegitComment()
     {
@@ -100,46 +90,33 @@ class Comment
     {
         return $this->content;
     }
-
-    /**
-     * @param string $content
-     */
     public function setContent($content)
     {
         $this->content = $content;
+    }
+
+    public function getAuthorEmail()
+    {
+        return $this->authorEmail;
+    }
+    public function setAuthorEmail($authorEmail)
+    {
+        $this->authorEmail = $authorEmail;
     }
 
     public function getPublishedAt()
     {
         return $this->publishedAt;
     }
-
     public function setPublishedAt(\DateTime $publishedAt)
     {
         $this->publishedAt = $publishedAt;
-    }
-
-    /**
-     * @return User
-     */
-    public function getAuthor()
-    {
-        return $this->author;
-    }
-
-    /**
-     * @param User $author
-     */
-    public function setAuthor(User $author)
-    {
-        $this->author = $author;
     }
 
     public function getPost()
     {
         return $this->post;
     }
-
     public function setPost(Post $post)
     {
         $this->post = $post;

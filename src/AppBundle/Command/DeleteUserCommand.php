@@ -12,27 +12,23 @@
 namespace AppBundle\Command;
 
 use AppBundle\Entity\User;
-use Doctrine\Common\Persistence\ObjectManager;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\Question;
+use Doctrine\Common\Persistence\ObjectManager;
 
 /**
  * A command console that deletes users from the database.
- *
  * To use this command, open a terminal window, enter into your project
  * directory and execute the following:
  *
- *     $ php bin/console app:delete-user
+ *     $ php app/console app:delete-user
  *
  * Check out the code of the src/AppBundle/Command/AddUserCommand.php file for
  * the full explanation about Symfony commands.
- *
  * See http://symfony.com/doc/current/cookbook/console/console_command.html
- * For more advanced uses, commands can be defined as services too. See
- * https://symfony.com/doc/current/console/commands_as_services.html
  *
  * @author Oleg Voronkovich <oleg-voronkovich@yandex.ru>
  */
@@ -54,7 +50,7 @@ class DeleteUserCommand extends ContainerAwareCommand
             ->setName('app:delete-user')
             ->setDescription('Deletes users from the database')
             ->addArgument('username', InputArgument::REQUIRED, 'The username of an existing user')
-            ->setHelp(<<<'HELP'
+            ->setHelp(<<<HELP
 The <info>%command.name%</info> command deletes users from the database:
 
   <info>php %command.full_name%</info> <comment>username</comment>
@@ -82,25 +78,25 @@ HELP
         $output->writeln('Delete User Command Interactive Wizard');
         $output->writeln('-----------------------------------');
 
-        $output->writeln([
+        $output->writeln(array(
             '',
             'If you prefer to not use this interactive wizard, provide the',
             'arguments required by this command as follows:',
             '',
-            ' $ php bin/console app:delete-user username',
+            ' $ php app/console app:delete-user username',
             '',
-        ]);
+        ));
 
-        $output->writeln([
+        $output->writeln(array(
             '',
             'Now we\'ll ask you for the value of all the missing command arguments.',
             '',
-        ]);
+        ));
 
         $helper = $this->getHelper('question');
 
         $question = new Question(' > <info>Username</info>: ');
-        $question->setValidator([$this, 'usernameValidator']);
+        $question->setValidator(array($this, 'usernameValidator'));
         $question->setMaxAttempts(self::MAX_ATTEMPTS);
 
         $username = $helper->ask($input, $output, $question);
@@ -112,7 +108,7 @@ HELP
         $username = $input->getArgument('username');
         $this->usernameValidator($username);
 
-        $repository = $this->entityManager->getRepository(User::class);
+        $repository = $this->entityManager->getRepository('AppBundle:User');
         /** @var User $user */
         $user = $repository->findOneByUsername($username);
 

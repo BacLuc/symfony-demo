@@ -40,17 +40,17 @@ class SourceCodeExtension extends \Twig_Extension
      */
     public function getFunctions()
     {
-        return [
-            new \Twig_SimpleFunction('show_source_code', [$this, 'showSourceCode'], ['is_safe' => ['html'], 'needs_environment' => true]),
-        ];
+        return array(
+            new \Twig_SimpleFunction('show_source_code', array($this, 'showSourceCode'), array('is_safe' => array('html'), 'needs_environment' => true)),
+        );
     }
 
     public function showSourceCode(\Twig_Environment $twig, $template)
     {
-        return $twig->render('@CodeExplorer/source_code.html.twig', [
+        return $twig->render('@CodeExplorer/source_code.html.twig', array(
             'controller' => $this->getController(),
-            'template' => $this->getTemplateSource($twig->resolveTemplate($template)),
-        ]);
+            'template'   => $this->getTemplateSource($twig->resolveTemplate($template)),
+        ));
     }
 
     private function getController()
@@ -66,11 +66,11 @@ class SourceCodeExtension extends \Twig_Extension
         $methodCode = array_slice($classCode, $method->getStartLine() - 1, $method->getEndLine() - $method->getStartLine() + 1);
         $controllerCode = '    '.$method->getDocComment()."\n".implode('', $methodCode);
 
-        return [
+        return array(
             'file_path' => $method->getFileName(),
             'starting_line' => $method->getStartLine(),
-            'source_code' => $this->unindentCode($controllerCode),
-        ];
+            'source_code' => $this->unindentCode($controllerCode)
+        );
     }
 
     /**
@@ -99,24 +99,23 @@ class SourceCodeExtension extends \Twig_Extension
 
     private function getTemplateSource(\Twig_Template $template)
     {
-        $templateSource = $template->getSourceContext();
-
-        return [
-            // Twig templates are not always stored in files (they can be stored
-            // in a database for example). However, for the needs of the Symfony
-            // Demo app, we consider that all templates are stored in files and
-            // that their file paths can be obtained through the source context.
-            'file_path' => $templateSource->getPath(),
+        return array(
+            // Twig templates are not always stored in files, and so there is no
+            // API to get the filename from a template name in a generic way.
+            // The logic used here works only for templates stored in app/Resources/views
+            // and referenced via the "filename.html.twig" notation, not via the "::filename.html.twig"
+            // one or stored in bundles. This is enough for the needs of the demo app.
+            'file_path' => $this->kernelRootDir.'/Resources/views/'.$template->getTemplateName(),
             'starting_line' => 1,
-            'source_code' => $templateSource->getCode(),
-        ];
+            'source_code' => $template->getSourceContext()->getCode(),
+        );
     }
 
     /**
      * Utility method that "unindents" the given $code when all its lines start
      * with a tabulation of four white spaces.
      *
-     * @param string $code
+     * @param  string $code
      *
      * @return string
      */
@@ -130,9 +129,7 @@ class SourceCodeExtension extends \Twig_Extension
         });
 
         if (count($indentedLines) === count($codeLines)) {
-            $formattedCode = array_map(function ($lineOfCode) {
-                return substr($lineOfCode, 4);
-            }, $codeLines);
+            $formattedCode = array_map(function ($lineOfCode) { return substr($lineOfCode, 4); }, $codeLines);
             $formattedCode = implode("\n", $formattedCode);
         }
 
